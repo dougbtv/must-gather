@@ -17,13 +17,13 @@ function gather_multus_data {
 
 MULTUS_DAEMON_PODS="${@:-$(oc -n openshift-multus get pods -l app=multus -o jsonpath='{.items[*].metadata.name}')}"
 INPUT_LOG_PATH="/var/run/multus/cni/net.d/multus.log"
-# OUTPUT_LOG_PATH="/path/to/must-gather/log/FIXME/"
+OUTPUT_LOG_PATH=${OUT:-"${NETWORK_LOG_PATH}/multus_logs"}
 
 function gather_multus_logs {
   for DAEMON_POD in ${MULTUS_DAEMON_PODS[@]}; do
   # Collect var/log/multus.log if exists.
     out=$(oc exec -n openshift-multus "${DAEMON_POD}" -- \
-    /bin/bash -c "cat $INPUT_LOG_PATH" 2>/dev/null) && echo "$out" 1> "${NETWORK_LOG_PATH}"
+    /bin/bash -c "cat $INPUT_LOG_PATH" 2>/dev/null) && echo "$out" 1> "${OUTPUT_LOG_PATH}"
   done
 }
 
@@ -94,6 +94,7 @@ NETWORK_TYPE=$(oc get network.config.openshift.io -o=jsonpath='{.items[0].spec.n
 
 gather_multus_data
 gather_scale_data
+gather_multus_logs
 
 if [[ "${NETWORK_TYPE}" == "kuryr" ]]; then
     gather_kuryr_data
