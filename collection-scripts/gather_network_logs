@@ -15,6 +15,18 @@ function gather_multus_data {
   oc get multi-networkpolicy -o yaml --all-namespaces > "${NETWORK_LOG_PATH}"/multi_networkpolicy 2>&1 & PIDS+=($!)
 }
 
+MULTUS_DAEMON_PODS="${@:-$(oc -n openshift-multus get pods -l app=multus -o jsonpath='{.items[*].metadata.name}')}"
+INPUT_LOG_PATH="/var/run/multus/cni/net.d/multus.log"
+# OUTPUT_LOG_PATH="/path/to/must-gather/log/FIXME/"
+
+function gather_multus_logs {
+  for DAEMON_POD in ${MULTUS_DAEMON_PODS[@]}; do
+  # Collect var/log/multus.log if exists.
+    out=$(oc exec -n openshift-multus "${DAEMON_POD}" -- \
+    /bin/bash -c "cat $INPUT_LOG_PATH" 2>/dev/null) && echo "$out" 1> "${NETWORK_LOG_PATH}"
+  done
+}
+
 function gather_ovn_kubernetes_data {
   echo "INFO: Gathering ovn-kubernetes master data"
   OVNKUBE_MASTER_PODS=($(oc -n openshift-ovn-kubernetes get pods -l app=ovnkube-master -o=jsonpath='{.items[*].metadata.name}'))
